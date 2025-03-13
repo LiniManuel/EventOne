@@ -1,8 +1,9 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, Text, ForeignKey, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 from typing import List
+
+from sqlalchemy import Integer, Text, ForeignKey, DateTime, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
 
@@ -20,5 +21,5 @@ class Event(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="events")
-    reservations: Mapped[List["Reservation"]] = relationship(back_populates="events", cascade="all, delete-orphan")
-    comments: Mapped[List["Comment"]] = relationship(back_populates="events", cascade="all, delete-orphan")
+    comments: Mapped[List["Comment"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    reservations: Mapped[List["Reservation"]] = relationship(back_populates="event", cascade="all, delete-orphan")
