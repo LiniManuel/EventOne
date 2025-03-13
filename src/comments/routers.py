@@ -7,26 +7,30 @@ from sqlalchemy.future import select
 from src.comments.models import Comment
 from src.comments.schemas import CommentCreate, CommentResponse, CommentUpdate
 from src.database import get_async_session
+from src.security import JWTBearer
 
 router = APIRouter(
     prefix="/comments",
-    tags=["Comments"],
+    tags=["comments"],
 )
 
 
-@router.get("/", response_model=Optional[List[CommentResponse]])
-async def get_comments(session: AsyncSession = Depends(get_async_session)):
-    query = select(Comment)
+@router.get("/", name="Lista dei propri commenti", response_model=Optional[List[CommentResponse]])
+async def get_comments(session: AsyncSession = Depends(get_async_session),
+                       user_id: int = Depends(JWTBearer())):
+    query = select(Comment).where(Comment.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.all()
     return result
 
 
 @router.post("/", response_model=CommentResponse, status_code=201)
-async def create_comment(payload: CommentCreate, session: AsyncSession = Depends(get_async_session)):
+async def create_comment(payload: CommentCreate,
+                         session: AsyncSession = Depends(get_async_session),
+                         user_id: int = Depends(JWTBearer())):
     new_comment = Comment(
         content=payload.content.model_dump(),
-        user_id=payload.user_id,
+        user_id=user_id,
         event_id=payload.event_id
     )
 
@@ -36,8 +40,10 @@ async def create_comment(payload: CommentCreate, session: AsyncSession = Depends
 
 
 @router.get("/{comment_id}", response_model=CommentResponse)
-async def get_comment(comment_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Comment).where(Comment.id == comment_id)
+async def get_comment(comment_id: int,
+                      session: AsyncSession = Depends(get_async_session),
+                      user_id: int = Depends(JWTBearer())):
+    query = select(Comment).where(Comment.id == comment_id, Comment.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
     if result is None:
@@ -46,8 +52,11 @@ async def get_comment(comment_id: int, session: AsyncSession = Depends(get_async
 
 
 @router.patch("/{comment_id}", response_model=CommentResponse)
-async def update_comment(comment_id: int, comment: CommentUpdate, session: AsyncSession = Depends(get_async_session)):
-    query = select(Comment).where(Comment.id == comment_id)
+async def update_comment(comment_id: int,
+                         comment: CommentUpdate,
+                         session: AsyncSession = Depends(get_async_session),
+                         user_id: int = Depends(JWTBearer())):
+    query = select(Comment).where(Comment.id == comment_id, Comment.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
     if result is None:
@@ -62,8 +71,10 @@ async def update_comment(comment_id: int, comment: CommentUpdate, session: Async
 
 
 @router.delete("/{comment_id}", status_code=204)
-async def delete_comment(comment_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Comment).where(Comment.id == comment_id)
+async def delete_comment(comment_id: int,
+                         session: AsyncSession = Depends(get_async_session),
+                         user_id: int = Depends(JWTBearer())):
+    query = select(Comment).where(Comment.id == comment_id, Comment.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
     if result is None:

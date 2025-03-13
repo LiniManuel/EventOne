@@ -24,3 +24,8 @@ class UserUpdate(CustomBase):
     email: Optional[EmailStr] = Field(None)
     password: Optional[str] = Field(None, min_length=5, max_length=30)
     is_admin: Optional[bool] = Field(None)
+
+
+class UserLogin(CustomBase):
+    username: Optional[str] = Field(None, min_length=5, max_length=30)
+    password: Optional[str] = Field(None, min_length=5, max_length=30)

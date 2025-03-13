@@ -7,10 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_async_session
 from src.events.models import Event
 from src.events.schemas import EventResponse, EventCreate, EventUpdate
+from src.security import JWTBearer
 
 router = APIRouter(
     prefix="/events",
-    tags=["Events"]
+    tags=["events"]
 )
 
 
@@ -23,13 +24,15 @@ async def get_events(session: AsyncSession = Depends(get_async_session)):
 
 
 @router.post("/", response_model=EventResponse)
-async def create_event(payload: EventCreate, session: AsyncSession = Depends(get_async_session)):
+async def create_event(payload: EventCreate,
+                       session: AsyncSession = Depends(get_async_session),
+                       user_id: int = Depends(JWTBearer())):
     new_event = Event(
         name=payload.name,
         date=payload.date,
         location=payload.location,
         capacity=payload.capacity,
-        user_id=payload.user_id,
+        user_id=user_id,
         content=payload.content
     )
     session.add(new_event)
@@ -38,8 +41,10 @@ async def create_event(payload: EventCreate, session: AsyncSession = Depends(get
 
 
 @router.get("/{event_id}", response_model=EventResponse)
-async def get_event(event_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Event).where(Event.id == event_id)
+async def get_event(event_id: int,
+                    session: AsyncSession = Depends(get_async_session),
+                    user_id: int = Depends(JWTBearer())):
+    query = select(Event).where(Event.id == event_id, Event.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 
@@ -50,8 +55,10 @@ async def get_event(event_id: int, session: AsyncSession = Depends(get_async_ses
 
 
 @router.patch("/{event_id}", response_model=EventResponse)
-async def update_event(event_id: int, payload: EventUpdate, session: AsyncSession = Depends(get_async_session)):
-    query = select(Event).where(Event.id == event_id)
+async def update_event(event_id: int, payload: EventUpdate,
+                       session: AsyncSession = Depends(get_async_session),
+                       user_id: int = Depends(JWTBearer())):
+    query = select(Event).where(Event.id == event_id, Event.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 
@@ -67,8 +74,10 @@ async def update_event(event_id: int, payload: EventUpdate, session: AsyncSessio
 
 
 @router.delete("/{event_id}", status_code=204)
-async def delete_event(event_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Event).where(Event.id == event_id)
+async def delete_event(event_id: int,
+                       session: AsyncSession = Depends(get_async_session),
+                       user_id: int = Depends(JWTBearer())):
+    query = select(Event).where(Event.id == event_id, Event.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 

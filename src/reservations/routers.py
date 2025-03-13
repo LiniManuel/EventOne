@@ -8,23 +8,28 @@ from src.database import get_async_session
 from src.events.models import Event
 from src.reservations.models import Reservation
 from src.reservations.schemas import ReservationCreate, ReservationResponse, ReservationUpdate
+from src.security import JWTBearer
 
 router = APIRouter(
     prefix="/reservations",
-    tags=["Reservations"],
+    tags=["reservations"],
 )
 
 
 @router.get("/", response_model=Optional[List[ReservationResponse]])
-async def get_reservations(session: AsyncSession = Depends(get_async_session)):
-    query = select(Reservation)
+async def get_reservations(session: AsyncSession = Depends(get_async_session),
+                           user_id: int = Depends(JWTBearer())):
+    query = select(Reservation).where(Reservation.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.all()
     return result
 
 
 @router.post("/", response_model=ReservationResponse, status_code=201)
-async def create_reservation(payload: ReservationCreate, session: AsyncSession = Depends(get_async_session)):
+async def create_reservation(
+        payload: ReservationCreate,
+        session: AsyncSession = Depends(get_async_session),
+        user_id: int = Depends(JWTBearer())):
     # verifico se non supera il limite di posti disponibili
     # prima recupero i posti disponibili per l'evento
     query = select(Event.capacity).where(Event.id == payload.event_id)
@@ -45,7 +50,7 @@ async def create_reservation(payload: ReservationCreate, session: AsyncSession =
 
     new_reservation = Reservation(
         num_guests=payload.num_guests,
-        user_id=payload.user_id,
+        user_id=user_id,
         event_id=payload.event_id
     )
 
@@ -55,8 +60,10 @@ async def create_reservation(payload: ReservationCreate, session: AsyncSession =
 
 
 @router.get("/{reservation_id}", response_model=ReservationResponse)
-async def get_reservation(reservation_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Reservation).where(Reservation.id == reservation_id)
+async def get_reservation(reservation_id: int,
+                          session: AsyncSession = Depends(get_async_session),
+                          user_id: int = Depends(JWTBearer())):
+    query = select(Reservation).where(Reservation.id == reservation_id, Reservation.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 
@@ -68,8 +75,9 @@ async def get_reservation(reservation_id: int, session: AsyncSession = Depends(g
 
 @router.patch("/{reservation_id}", response_model=ReservationResponse)
 async def update_reservation(reservation_id: int, payload: ReservationUpdate,
-                             session: AsyncSession = Depends(get_async_session)):
-    query = select(Reservation).where(Reservation.id == reservation_id)
+                             session: AsyncSession = Depends(get_async_session),
+                             user_id: int = Depends(JWTBearer())):
+    query = select(Reservation).where(Reservation.id == reservation_id, Reservation.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 
@@ -85,8 +93,10 @@ async def update_reservation(reservation_id: int, payload: ReservationUpdate,
 
 
 @router.delete("/{reservation_id}", status_code=204)
-async def delete_reservation(reservation_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(Reservation).where(Reservation.id == reservation_id)
+async def delete_reservation(reservation_id: int,
+                             session: AsyncSession = Depends(get_async_session),
+                             user_id: int = Depends(JWTBearer())):
+    query = select(Reservation).where(Reservation.id == reservation_id, Reservation.user_id == user_id)
     query_result = await session.scalars(query)
     result = query_result.first()
 
